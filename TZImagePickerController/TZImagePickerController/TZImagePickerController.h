@@ -80,6 +80,9 @@
 /// 超时时间，默认为30秒，当取图片时间超过30秒还没有取成功时，会自动dismiss HUD；
 @property (nonatomic, assign) NSInteger timeout;
 
+/// 限制选择资源的大小
+@property (nonatomic, assign) NSInteger assetMaxSize; 
+
 /// Default is YES, if set NO, the original photo button will hide. user can't picking original photo.
 /// 默认为YES，如果设置为NO,原图按钮将隐藏，用户不能选择发送原图
 @property (nonatomic, assign) BOOL allowPickingOriginalPhoto;

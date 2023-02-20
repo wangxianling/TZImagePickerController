@@ -196,7 +196,13 @@
         [[TZImageManager manager] getVideoWithAsset:_model.asset completion:^(AVPlayerItem *playerItem, NSDictionary *info) {
             BOOL iCloudSyncFailed = !playerItem && [TZCommonTools isICloudSyncError:info[PHImageErrorKey]];
             self.model.iCloudFailed = iCloudSyncFailed;
-            if (iCloudSyncFailed && self.didSelectPhotoBlock) {
+            AVURLAsset *URLAsset = (AVURLAsset*)playerItem.asset;
+            NSNumber *size;
+            [URLAsset.URL getResourceValue:&size forKey:NSURLFileSizeKey error:nil];
+            CGFloat assetSize = [size floatValue] / (1024*1024);
+            self.model.assetSize = assetSize;
+            self.model.assetSizeExceed = (self.model.assetSize > self.assetMaxSize)?:NO;
+            if (iCloudSyncFailed && self.didSelectPhotoBlock || self.model.assetSizeExceed) {
                 dispatch_async(dispatch_get_main_queue(), ^{
                     self.didSelectPhotoBlock(YES);
                     self.selectImageView.image = self.photoDefImage;

@@ -30,6 +30,8 @@ typedef enum : NSUInteger {
 @property (nonatomic, copy) NSString *representedAssetIdentifier;
 @property (nonatomic, assign) int32_t imageRequestID;
 
+@property (nonatomic, assign) NSInteger assetMaxSize; 
+
 @property (nonatomic, strong) UIImage *photoSelImage;
 @property (nonatomic, strong) UIImage *photoDefImage;
 

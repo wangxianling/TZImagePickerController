@@ -612,6 +612,7 @@ static CGFloat itemMargin = 5;
         model = _models[indexPath.item - diff];;
     }
     cell.allowPickingGif = tzImagePickerVc.allowPickingGif;
+    cell.assetMaxSize = tzImagePickerVc.assetMaxSize;
     cell.model = model;
     if (model.isSelected && tzImagePickerVc.showSelectedIndex) {
         cell.index = [tzImagePickerVc.selectedAssetIds indexOfObject:model.asset.localIdentifier] + 1;
@@ -655,6 +656,9 @@ static CGFloat itemMargin = 5;
             if (strongCell.model.iCloudFailed) {
                 NSString *title = [NSBundle tz_localizedStringForKey:@"iCloud sync failed"];
                 [tzImagePickerVc showAlertWithTitle:title];
+            }else if (strongCell.model.assetSizeExceed) {
+                NSString *title = [NSString stringWithFormat:[NSBundle tz_localizedStringForKey:@"Resource size exceeds %zd MB"], weakCell.assetMaxSize];
+                [tzImagePickerVc showAlertWithTitle:title];
             }
         } else {
             // 2. select:check if over the maxImagesCount / 选择照片,检查是否超过了最大个数的限制
@@ -685,6 +689,9 @@ static CGFloat itemMargin = 5;
                 [UIView showOscillatoryAnimationWithLayer:strongLayer type:TZOscillatoryAnimationToSmaller];
             } else {
                 NSString *title = [NSString stringWithFormat:[NSBundle tz_localizedStringForKey:@"Select a maximum of %zd photos"], tzImagePickerVc.maxImagesCount];
+                if (model.type == TZAssetModelMediaTypeVideo) {
+                    title = [NSString stringWithFormat:[NSBundle tz_localizedStringForKey:@"Select a maximum of %zd Videos"], tzImagePickerVc.maxImagesCount];
+                }
                 [tzImagePickerVc showAlertWithTitle:title];
             }
         }
@@ -726,10 +733,34 @@ static CGFloat itemMargin = 5;
             [self.navigationController pushViewController:gifPreviewVc animated:YES];
         }
     } else {
-        TZPhotoPreviewController *photoPreviewVc = [[TZPhotoPreviewController alloc] init];
-        photoPreviewVc.currentIndex = index;
-        photoPreviewVc.models = _models;
-        [self pushPhotoPrevireViewController:photoPreviewVc];
+        if (model.type == TZAssetModelMediaTypeVideo){
+            [[TZImageManager manager] getVideoWithAsset:model.asset completion:^(AVPlayerItem *playerItem, NSDictionary *info) {
+                BOOL iCloudSyncFailed = !playerItem && [TZCommonTools isICloudSyncError:info[PHImageErrorKey]];
+                model.iCloudFailed = iCloudSyncFailed;
+                AVURLAsset *URLAsset = (AVURLAsset*)playerItem.asset;
+                NSNumber *size;
+                [URLAsset.URL getResourceValue:&size forKey:NSURLFileSizeKey error:nil];
+                CGFloat assetSize = [size floatValue] / (1024*1024);
+                model.assetSize = assetSize;
+                model.assetSizeExceed = (model.assetSize > tzImagePickerVc.assetMaxSize)?:NO;
+                dispatch_async(dispatch_get_main_queue(), ^{
+                    if (iCloudSyncFailed || model.assetSizeExceed) {
+                        NSString *title = [NSString stringWithFormat:[NSBundle tz_localizedStringForKey:@"Resource size exceeds %zd MB"], tzImagePickerVc.assetMaxSize];
+                        [tzImagePickerVc showAlertWithTitle:title];
+                    }else {
+                        TZPhotoPreviewController *photoPreviewVc = [[TZPhotoPreviewController alloc] init];
+                        photoPreviewVc.currentIndex = index;
+                        photoPreviewVc.models = _models;
+                        [self pushPhotoPrevireViewController:photoPreviewVc];
+                    }
+                });
+            }];
+        }else {
+            TZPhotoPreviewController *photoPreviewVc = [[TZPhotoPreviewController alloc] init];
+            photoPreviewVc.currentIndex = index;
+            photoPreviewVc.models = _models;
+            [self pushPhotoPrevireViewController:photoPreviewVc];
+        }
     }
 }
 
